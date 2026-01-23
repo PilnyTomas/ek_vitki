@@ -80,6 +80,14 @@ AMBIGUOUS_LETTERS = {
     },
 }
 
+def normalize_whitespace(text):
+    """
+    Normalizes all whitespace (spaces, tabs, multiple spaces) to single spaces.
+    """
+    import re
+    return re.sub(r'\s+', ' ', text)
+
+
 def prompt_for_substitution(letter, word, position, substitution_cache=None):
     """
     Prompts user to choose phonetic substitution for ambiguous letters.
@@ -159,8 +167,17 @@ def latin_to_elder_futhark(text, interactive=True, word_context="", substitution
             result.append(ELDER_FUTHARK[text_lower[i]][0])
             i += 1
         elif interactive and text_lower[i] in AMBIGUOUS_LETTERS:
+            # Extract the current word containing this letter
+            word_start = i
+            while word_start > 0 and text_lower[word_start - 1] not in ' \t\n\r':
+                word_start -= 1
+            word_end = i
+            while word_end < len(text_lower) and text_lower[word_end] not in ' \t\n\r':
+                word_end += 1
+            current_word = text_lower[word_start:word_end]
+            
             # Prompt user for phonetic choice
-            choice = prompt_for_substitution(text_lower[i], word_context or text, i + 1, substitution_cache)
+            choice = prompt_for_substitution(text_lower[i], current_word, i + 1, substitution_cache)
             if choice:
                 rune_str = choice[0]
                 result.append(rune_str)
@@ -175,30 +192,46 @@ def latin_to_elder_futhark(text, interactive=True, word_context="", substitution
 
 def to_aett_pos(text, interactive=True, word_context="", substitution_cache=None):
     """
-    Converts text to numeric ætt:position scheme (e.g., 'fu' → '1:1 1:2')
-    Ignores untranslatable characters.
+    Converts text to structured data with numeric ætt:position pairs.
+    Returns list of tuples: [(aett, pos), 'SPACE', (aett, pos), ...]
+    SPACE markers indicate word boundaries.
     """
     text_lower = text.lower()
     result = []
     i = 0
     
     while i < len(text_lower):
+        # Check for space/whitespace
+        if text_lower[i] in ' \t\n\r':
+            # Add space marker if not already at boundary
+            if result and result[-1] != 'SPACE':
+                result.append('SPACE')
+            i += 1
         # Check for two-character sequences first
-        if i + 1 < len(text_lower) and text_lower[i:i+2] in ELDER_FUTHARK:
+        elif i + 1 < len(text_lower) and text_lower[i:i+2] in ELDER_FUTHARK:
             rune, aett, pos = ELDER_FUTHARK[text_lower[i:i+2]]
             if aett is not None and pos is not None:
-                result.append(f"{aett}:{pos}")
+                result.append((aett, pos))
             i += 2
         elif text_lower[i] in ELDER_FUTHARK:
             rune, aett, pos = ELDER_FUTHARK[text_lower[i]]
             if aett is not None and pos is not None:
-                result.append(f"{aett}:{pos}")
+                result.append((aett, pos))
             i += 1
         elif interactive and text_lower[i] in AMBIGUOUS_LETTERS:
+            # Extract the current word containing this letter
+            word_start = i
+            while word_start > 0 and text_lower[word_start - 1] not in ' \t\n\r':
+                word_start -= 1
+            word_end = i
+            while word_end < len(text_lower) and text_lower[word_end] not in ' \t\n\r':
+                word_end += 1
+            current_word = text_lower[word_start:word_end]
+            
             # Prompt user for phonetic choice (uses cache)
-            choice = prompt_for_substitution(text_lower[i], word_context or text, i + 1, substitution_cache)
+            choice = prompt_for_substitution(text_lower[i], current_word, i + 1, substitution_cache)
             if choice and choice[1] is not None and choice[2] is not None:
-                result.append(f"{choice[1]}:{choice[2]}")
+                result.append((choice[1], choice[2]))
             # For multi-rune choices like 'kw', we need to handle differently
             elif choice and choice[0] and len(choice[0]) > 1:
                 # Multi-character rune sequence - extract positions
@@ -206,13 +239,13 @@ def to_aett_pos(text, interactive=True, word_context="", substitution_cache=None
                     # Find this rune in ELDER_FUTHARK
                     for key, val in ELDER_FUTHARK.items():
                         if val[0] == rune_char and val[1] is not None:
-                            result.append(f"{val[1]}:{val[2]}")
+                            result.append((val[1], val[2]))
                             break
             i += 1
         else:
             i += 1
     
-    return ' '.join(result)
+    return result
 
 def display_substitution_guide():
     """
@@ -235,11 +268,141 @@ def display_substitution_guide():
     print("="*60 + "\n")
 
 
+def normalize_whitespace(text):
+    """
+    Normalizes all whitespace (spaces, tabs, multiple spaces) to single spaces.
+    """
+    import re
+    return re.sub(r'\s+', ' ', text)
+
+
+def remove_numbers(text):
+    """
+    Removes all numeric digits from text.
+    """
+    import re
+    return re.sub(r'\d', '', text)
+
+
+def generate_branch_ascii(aett_pos_data):
+    """
+    Generates ASCII art for branch runes (kvistrúnar).
+    - 8 lines tall (positions 1-8 in an ætt)
+    - Left branches encode ætt number (number of \\ from top)
+    - Right branches encode position number (number of / from top)
+    - Example: 3:8 shows \\ on first 3 rows (left), / on all 8 rows (right)
+    - Words alternate direction (swap left/right branches)
+    
+    Args:
+        aett_pos_data: List of tuples [(aett, pos), 'SPACE', ...]
+    """
+    if not aett_pos_data:
+        return ""
+    
+    # Create 8 rows (for positions 8 down to 1)
+    rows = [[] for _ in range(8)]
+    
+    word_index = 0  # Track which word we're in
+    
+    for item in aett_pos_data:
+        if item == 'SPACE':
+            # Word boundary - increment word counter
+            word_index += 1
+            # Add visual separator between words
+            for row in rows:
+                row.append("  ")  # Double space for word boundary
+            continue
+        
+        aett, pos = item
+        
+        # Determine if we swap left/right based on word
+        swap = word_index % 2 == 1
+        
+        # For each row (position 1 to 8 from top to bottom)
+        for row_idx in range(8):
+            row_position = row_idx + 1  # Row 0 = position 1, row 7 = position 8
+            
+            # Determine what appears on left and right
+            if swap:
+                # Odd word: swap sides
+                left = '/' if row_position <= pos else ' '
+                right = '\\' if row_position <= aett else ' '
+            else:
+                # Even word: normal
+                left = '\\' if row_position <= aett else ' '
+                right = '/' if row_position <= pos else ' '
+            
+            # Build the pattern
+            rows[row_idx].append(f"{left}|{right}")
+    
+    # Join each row with spaces between columns
+    result = []
+    for row in rows:
+        result.append(" ".join(row))
+    
+    return '\n'.join(result)
+    
+
 # ────────────────────────────────────────────────
 # Test section
 # ────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    import sys
+    
+    # Check if text was provided as command line arguments
+    if len(sys.argv) > 1:
+        # Join all arguments as input text
+        user_input = ' '.join(sys.argv[1:])
+        
+        # Remove numbers
+        user_input = remove_numbers(user_input)
+        
+        # Normalize whitespace
+        normalized_input = normalize_whitespace(user_input)
+        
+        # Create shared cache for this translation
+        cache = {}
+        
+        # Unicode runes (with interactive prompts)
+        runes = latin_to_elder_futhark(normalized_input, interactive=True, word_context=normalized_input, substitution_cache=cache)
+        
+        # Get substituted text
+        substituted = get_substituted_text(normalized_input, cache)
+        
+        # Display all forms
+        print("\n" + "="*50)
+        print("Original:    ", user_input)
+        if normalized_input != user_input:
+            print("Normalized:  ", normalized_input)
+        print("Substituted: ", substituted)
+        print("Elder Futhark:", runes)
+        print("="*50)
+        
+        # Numeric scheme (reuses cached choices) - now returns structured data
+        aett_pos_data = to_aett_pos(normalized_input, interactive=True, word_context=normalized_input, substitution_cache=cache)
+        
+        # Convert to string for display with word separators
+        parts = []
+        for item in aett_pos_data:
+            if item == 'SPACE':
+                parts.append('-')
+            else:
+                a, p = item
+                parts.append(f"{a}:{p}")
+        aett_pos_str = ' '.join(parts)
+        print("\nNumeric ætt:position scheme:")
+        print(aett_pos_str)
+        
+        # ASCII branch art (if aett_pos_data exists)
+        if aett_pos_data:
+            ascii_art = generate_branch_ascii(aett_pos_data)
+            print("\nASCII art approximation of branch runes:")
+            print(ascii_art)
+        
+        sys.exit(0)
+    
+    # Interactive mode
     print("=== Latin to Elder Futhark Translator (with phonetic guidance) ===")
     display_substitution_guide()
     
@@ -249,25 +412,48 @@ if __name__ == "__main__":
             print("Goodbye!")
             break
         
+        # Remove numbers
+        user_input = remove_numbers(user_input)
+        
+        # Normalize whitespace
+        normalized_input = normalize_whitespace(user_input)
+        
         # Create shared cache for this translation
         cache = {}
         
         # Unicode runes (with interactive prompts)
-        runes = latin_to_elder_futhark(user_input, interactive=True, word_context=user_input, substitution_cache=cache)
+        runes = latin_to_elder_futhark(normalized_input, interactive=True, word_context=normalized_input, substitution_cache=cache)
         
         # Get substituted text
-        substituted = get_substituted_text(user_input, cache)
+        substituted = get_substituted_text(normalized_input, cache)
         
         # Display all forms
         print("\n" + "="*50)
         print("Original:    ", user_input)
+        if normalized_input != user_input:
+            print("Normalized:  ", normalized_input)
         print("Substituted: ", substituted)
         print("Elder Futhark:", runes)
         print("="*50)
         
-        # Numeric scheme (reuses cached choices)
-        aett_pos = to_aett_pos(user_input, interactive=True, word_context=user_input, substitution_cache=cache)
-        print("\nNumeric ætt:position scheme:")
-        print(aett_pos)
+        # Numeric scheme (reuses cached choices) - now returns structured data
+        aett_pos_data = to_aett_pos(normalized_input, interactive=True, word_context=normalized_input, substitution_cache=cache)
         
-        print("-" * 50)
+        # Convert to string for display with word separators
+        parts = []
+        for item in aett_pos_data:
+            if item == 'SPACE':
+                parts.append('-')
+            else:
+                a, p = item
+                parts.append(f"{a}:{p}")
+        aett_pos_str = ' '.join(parts)
+        print("\nNumeric ætt:position scheme:")
+        print(aett_pos_str)
+        
+        # ASCII branch art (if aett_pos_data exists)
+        if aett_pos_data:
+            ascii_art = generate_branch_ascii(aett_pos_data)
+            print("\nASCII art branch runes:")
+            print(ascii_art)
+        
