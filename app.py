@@ -25,6 +25,10 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+@app.route('/visual')
+def visual_editor():
+    return render_template('visual_editor.html')
+
 @app.route('/translate', methods=['POST'])
 def translate():
     data = request.json
@@ -33,6 +37,9 @@ def translate():
     
     print(f"Received text: {text}")
     print(f"Received substitutions: {substitutions}")
+    
+    # Store original before any processing
+    original_text = text
     
     # Remove numbers and normalize
     text = remove_numbers(text)
@@ -61,6 +68,10 @@ def translate():
     runes = latin_to_elder_futhark(normalized_input, interactive=False, substitution_cache=cache)
     substituted = get_substituted_text(normalized_input, cache)
     
+    # Only include substituted if it's actually different from normalized (phonetic substitution occurred)
+    if normalized_input == substituted:
+        substituted = normalized_input  # No phonetic substitution occurred
+    
     # Get numeric scheme
     aett_pos_data = to_aett_pos(normalized_input, interactive=False, substitution_cache=cache)
     
@@ -78,7 +89,7 @@ def translate():
     ascii_art = generate_branch_ascii(aett_pos_data) if aett_pos_data else ""
     
     return jsonify({
-        'original': text,
+        'original': normalized_input,  # Show normalized as "original" since whitespace differences don't matter
         'normalized': normalized_input,
         'substituted': substituted,
         'runes': runes,

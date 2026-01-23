@@ -204,6 +204,9 @@
     <div class="container">
         <h1>⚔️ Elder Futhark Translator ⚔️</h1>
         <p class="subtitle">Convert Latin text to Elder Futhark runes with phonetic guidance</p>
+        <p style="text-align: center; margin-bottom: 20px;">
+            <a href="/visual" style="color: #667eea; text-decoration: none; font-weight: bold;">🎨 Open Visual Editor (custom layer images) →</a>
+        </p>
         
         <div class="input-section">
             <label for="inputText">Enter text to translate:</label>
@@ -227,7 +230,7 @@
                 <div class="result-content" id="resultOriginal"></div>
             </div>
             
-            <div class="result-section">
+            <div class="result-section" id="substitutedSection" style="display: none !important;">
                 <div class="result-label">Substituted</div>
                 <div class="result-content" id="resultSubstituted"></div>
             </div>
@@ -381,11 +384,40 @@
                 }
                 
                 const data = await response.json();
-                console.log('Translation result:', data);
+                console.log('=== TRANSLATION RESULT ===');
+                console.log('Full data:', data);
+                console.log('Original:', JSON.stringify(data.original));
+                console.log('Substituted:', JSON.stringify(data.substituted));
+                console.log('Are they equal?', data.original === data.substituted);
+                console.log('Trimmed equal?', data.original.trim() === data.substituted.trim());
+                console.log('Original length:', data.original.length);
+                console.log('Substituted length:', data.substituted.length);
+                
+                // Check if there was any substitution (trim to handle whitespace differences)
+                const hasSubstitution = data.original.trim() !== data.substituted.trim();
+                console.log('hasSubstitution:', hasSubstitution);
+                
+                // Update label based on whether substitution occurred
+                const originalLabel = document.querySelector('#resultOriginal').previousElementSibling;
+                originalLabel.textContent = hasSubstitution ? 'Original' : 'Input';
+                console.log('Label set to:', originalLabel.textContent);
                 
                 document.getElementById('resultOriginal').textContent = data.original;
-                document.getElementById('resultNormalized').textContent = data.normalized;
-                document.getElementById('resultSubstituted').textContent = data.substituted;
+                
+                // Show/hide substituted section based on whether substitution occurred
+                const substitutedSection = document.getElementById('substitutedSection');
+                console.log('Substituted section element:', substitutedSection);
+                if (hasSubstitution) {
+                    console.log('Setting substituted section to VISIBLE');
+                    substitutedSection.style.cssText = 'display: block !important;';
+                    document.getElementById('resultSubstituted').textContent = data.substituted;
+                } else {
+                    console.log('Setting substituted section to HIDDEN');
+                    substitutedSection.style.cssText = 'display: none !important;';
+                }
+                console.log('Substituted section display after setting:', window.getComputedStyle(substitutedSection).display);
+                console.log('=========================');
+                
                 document.getElementById('resultRunes').textContent = data.runes;
                 document.getElementById('resultNumeric').textContent = data.numeric;
                 document.getElementById('resultAscii').textContent = data.ascii_art;
