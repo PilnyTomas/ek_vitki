@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elder Futhark Translator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+        
+        .input-section {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            font-weight: bold;
+            color: #444;
+            margin-bottom: 8px;
+        }
+        
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .ambiguous-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .ambiguous-section.show {
+            display: block;
+        }
+        
+        .ambiguous-item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .ambiguous-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .ambiguous-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .radio-option input[type="radio"] {
+            cursor: pointer;
+        }
+        
+        .radio-option label {
+            cursor: pointer;
+            margin: 0;
+            font-weight: normal;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .result-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .result-label {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        
+        .result-content {
+            font-size: 18px;
+            color: #333;
+            word-wrap: break-word;
+        }
+        
+        .result-content.runes {
+            font-size: 28px;
+            letter-spacing: 2px;
+        }
+        
+        .result-content.ascii {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre;
+            overflow-x: auto;
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-style: italic;
+            display: none;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ Elder Futhark Translator ⚔️</h1>
+        <p class="subtitle">Convert Latin text to Elder Futhark runes with phonetic guidance</p>
+        
+        <div class="input-section">
+            <label for="inputText">Enter text to translate:</label>
+            <textarea id="inputText" placeholder="Type your text here..."></textarea>
+        </div>
+        
+        <button onclick="checkAmbiguous()">Analyze Text</button>
+        
+        <div id="ambiguousSection" class="ambiguous-section">
+            <h3 style="margin-bottom: 15px;">Choose phonetic substitutions:</h3>
+            <div id="ambiguousChoices"></div>
+        </div>
+        
+        <button id="translateBtn" onclick="translateText()" style="display: none;">Translate to Runes</button>
+        
+        <div class="loading" id="loading">Translating...</div>
+        
+        <div id="results" class="results">
+            <div class="result-section">
+                <div class="result-label">Original</div>
+                <div class="result-content" id="resultOriginal"></div>
+            </div>
+            
+            <div class="result-section">
+                <div class="result-label">Substituted</div>
+                <div class="result-content" id="resultSubstituted"></div>
+            </div>
+            
+            <div class="result-section">
+                <div class="result-label">Elder Futhark Runes</div>
+                <div class="result-content runes" id="resultRunes"></div>
+            </div>
+            
+            <div class="result-section">
+                <div class="result-label">Numeric ætt:position scheme</div>
+                <div class="result-content" id="resultNumeric"></div>
+            </div>
+            
+            <div class="result-section">
+                <div class="result-label">ASCII Branch Runes (Kvistrúnar)</div>
+                <div class="result-content ascii" id="resultAscii"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let ambiguousData = [];
+        
+        async function checkAmbiguous() {
+            const text = document.getElementById('inputText').value;
+            if (!text.trim()) {
+                alert('Please enter some text first');
+                return;
+            }
+            
+            // Hide previous results
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('ambiguousSection').classList.remove('show');
+            document.getElementById('translateBtn').style.display = 'none';
+            
+            try {
+                const response = await fetch('/get_ambiguous', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                const data = await response.json();
+                ambiguousData = data.ambiguous;
+                
+                if (ambiguousData.length > 0) {
+                    displayAmbiguousChoices();
+                    document.getElementById('ambiguousSection').classList.add('show');
+                    document.getElementById('translateBtn').style.display = 'block';
+                } else {
+                    // No ambiguous letters, translate directly
+                    translateText();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error analyzing text');
+            }
+        }
+        
+        function displayAmbiguousChoices() {
+            const container = document.getElementById('ambiguousChoices');
+            container.innerHTML = '';
+            
+            ambiguousData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'ambiguous-item';
+                
+                const label = document.createElement('div');
+                label.className = 'ambiguous-label';
+                
+                // Find the letter in the word and underscore it
+                const letterPos = item.word.toLowerCase().indexOf(item.letter.toLowerCase());
+                let displayWord = item.word;
+                if (letterPos >= 0) {
+                    displayWord = item.word.substring(0, letterPos) + 
+                                 item.word[letterPos] + '̲' + // combining underline character
+                                 item.word.substring(letterPos + 1);
+                }
+                
+                label.textContent = `In '${displayWord}', letter '${item.letter}' at position ${item.position}: ${item.prompt}`;
+                div.appendChild(label);
+                
+                const radioGroup = document.createElement('div');
+                radioGroup.className = 'radio-group';
+                
+                item.choices.forEach((choice, choiceIndex) => {
+                    const radioOption = document.createElement('div');
+                    radioOption.className = 'radio-option';
+                    
+                    const radio = document.createElement('input');
+                    radio.type = 'radio';
+                    radio.name = `choice_${item.position}`;
+                    radio.value = choice;
+                    radio.id = `choice_${item.position}_${choiceIndex}`;
+                    if (choiceIndex === 0) radio.checked = true;
+                    
+                    const radioLabel = document.createElement('label');
+                    radioLabel.htmlFor = radio.id;
+                    radioLabel.textContent = choice;
+                    
+                    radioOption.appendChild(radio);
+                    radioOption.appendChild(radioLabel);
+                    radioGroup.appendChild(radioOption);
+                });
+                
+                div.appendChild(radioGroup);
+                container.appendChild(div);
+            });
+        }
+        
+        async function translateText() {
+            console.log('Translate function called');
+            const text = document.getElementById('inputText').value;
+            console.log('Text:', text);
+            if (!text.trim()) {
+                alert('Please enter some text first');
+                return;
+            }
+            
+            // Collect user choices
+            const substitutions = {};
+            ambiguousData.forEach(item => {
+                const selected = document.querySelector(`input[name="choice_${item.position}"]:checked`);
+                if (selected) {
+                    substitutions[item.position] = selected.value;
+                }
+            });
+            
+            console.log('Translating with substitutions:', substitutions);
+            
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('results').classList.remove('show');
+            
+            try {
+                const response = await fetch('/translate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        text: text,
+                        substitutions: substitutions
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Translation result:', data);
+                
+                document.getElementById('resultOriginal').textContent = data.original;
+                document.getElementById('resultNormalized').textContent = data.normalized;
+                document.getElementById('resultSubstituted').textContent = data.substituted;
+                document.getElementById('resultRunes').textContent = data.runes;
+                document.getElementById('resultNumeric').textContent = data.numeric;
+                document.getElementById('resultAscii').textContent = data.ascii_art;
+                
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('results').classList.add('show');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error translating text: ' + error.message);
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+    </script>
+</body>
+</html>
