@@ -28,7 +28,7 @@ ELDER_FUTHARK = {
     'b': ('ᛒ', 3, 2),  # Berkano - birch, growth
     'm': ('ᛗ', 3, 4),  # Mannaz - man, humanity
     'l': ('ᛚ', 3, 5),  # Laguz - water, flow
-    'ŋ': ('ᛜ', 3, 6),  # Ingwaz - Ing, fertility
+    'ng': ('ᛜ', 3, 6), # 'ŋ' Ingwaz - Ing, fertility
     'd': ('ᛞ', 3, 7),  # Dagaz - day, breakthrough
     'o': ('ᛟ', 3, 8),  # Othala - heritage, homeland
     # Old Norse characters
@@ -39,6 +39,29 @@ ELDER_FUTHARK = {
     '.': ('.', None, None),
     ',': (',', None, None),
 }
+
+divisor_mapping = {
+    9:  "Nine - Most sacred number: 9 worlds, Odin’s sacrifice, highest magical potency",
+    3:  "Three - Core principle: the three ættir of the runes",
+    6:  "Six - Hagalaz structure, crystallization, balance",
+    12: "Twelve - Half of the full rune row, cosmic order",
+    24: "Twenty-four - Complete Elder Futhark, full systemic power",
+    4:  "Four - Four directions, stability, foundation",
+    8:  "Eight - Sleipnir’s eight legs, movement between worlds"
+}
+
+def print_divisor_descriptions(divisors):
+    """
+    Prints magical divisors and their descriptions.
+    """
+    if divisors:
+        print(f"Magically important divisors of the sum: {divisors}")
+        for divisor in divisors:
+            desc = divisor_mapping.get(divisor)
+            if desc:
+                print(f"  {divisor}: {desc}")
+    else:
+        print("No magically important divisors found for the sum.")
 
 # Ambiguous letters requiring phonetic choice
 AMBIGUOUS_LETTERS = {
@@ -283,6 +306,36 @@ def remove_numbers(text):
     import re
     return re.sub(r'\d', '', text)
 
+def sum_runic_text_value(aett_pos_data):
+    """
+    Sums the values of the runes in the finished runic text.
+    Value is (aett-1)*8 + position_in_aett for each rune.
+    Ignores spaces and non-rune items.
+    """
+    total = 0
+    for item in aett_pos_data:
+        if isinstance(item, tuple) and len(item) == 2:
+            aett, pos = item
+            if aett is not None and pos is not None:
+                total += (aett - 1) * 8 + pos
+    return total
+
+def decompose_rune_sum(sum_value):
+    """
+    Returns a sorted list of divisors of the rune sum according to magical importance in runic numerology.
+    Only numbers are returned.
+    Order: [9, 3, 6, 12, 24, 4, 8] (from most to least important).
+    """
+    if sum_value <= 0:
+        return []
+
+    # Order of importance (from strongest)
+    candidates = [9, 3, 6, 12, 24, 4, 8]
+    result = []
+    for divisor in candidates:
+        if sum_value % divisor == 0:
+            result.append(divisor)
+    return result
 
 def generate_branch_ascii(aett_pos_data):
     """
@@ -399,6 +452,13 @@ if __name__ == "__main__":
             ascii_art = generate_branch_ascii(aett_pos_data)
             print("\nASCII art approximation of branch runes:")
             print(ascii_art)
+
+        rune_sum = sum_runic_text_value(aett_pos_data)
+        print(f"\nSum of rune values ((aett-1)*8+pos): {rune_sum}")
+
+        # Show magical divisors of the rune sum
+        divisors = decompose_rune_sum(rune_sum)
+        print_divisor_descriptions(divisors)
         
         sys.exit(0)
     
@@ -456,4 +516,11 @@ if __name__ == "__main__":
             ascii_art = generate_branch_ascii(aett_pos_data)
             print("\nASCII art branch runes:")
             print(ascii_art)
+
+        rune_sum = sum_runic_text_value(aett_pos_data)
+        print(f"\nSum of rune values: {rune_sum}")
+
+        # Show magical divisors of the rune sum
+        divisors = decompose_rune_sum(rune_sum)
+        print_divisor_descriptions(divisors)
         
