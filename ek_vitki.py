@@ -35,9 +35,9 @@ ELDER_FUTHARK = {
     'þ': ('ᚦ', 1, 3),  # þ→th (Old Norse thorn)
     'ð': ('ᚦ', 1, 3),  # ð→th (Old Norse eth)
     # Special characters
-    ' ': ('  ', None, None),
-    '.': ('.', None, None),
-    ',': (',', None, None),
+    ' ': (' ', None, None),
+    '.': (' ', None, None),
+    ',': (' ', None, None),
 }
 
 divisor_mapping = {
@@ -49,6 +49,26 @@ divisor_mapping = {
     4:  "Four - Four directions, stability, foundation",
     8:  "Eight - Sleipnir’s eight legs, movement between worlds"
 }
+
+# Special letter normalization
+def normalize_special_letters(text):
+    """
+    Replace special/accented letters (Czech, German, Nordic, etc.) with their Latin equivalents.
+    """
+    mapping = {
+        # Czech, Slovak, Polish, Hungarian, German, Nordic, and more
+        'á': 'a', 'č': 'c', 'ď': 'd', 'é': 'e', 'ě': 'e', 'í': 'i', 'ň': 'n',
+        'ó': 'o', 'ř': 'r', 'š': 's', 'ť': 't', 'ú': 'u', 'ů': 'u', 'ý': 'y', 'ž': 'z',
+        'ä': 'a', 'ĺ': 'l', 'ľ': 'l', 'ŕ': 'r', 'ö': 'o', 'ü': 'u', 'ß': 'ss',
+        'æ': 'ae', 'ø': 'o', 'å': 'a', 'õ': 'o', 'õ': 'o', 'ő': 'o', 'ű': 'u',
+        'ç': 'c', 'ñ': 'n', 'ã': 'a', 'õ': 'o', 'ê': 'e', 'ë': 'e', 'â': 'a', 'ô': 'o',
+        'Á': 'a', 'Č': 'c', 'Ď': 'd', 'É': 'e', 'Ě': 'e', 'Í': 'i', 'Ň': 'n',
+        'Ó': 'o', 'Ř': 'r', 'Š': 's', 'Ť': 't', 'Ú': 'u', 'Ů': 'u', 'Ý': 'y', 'Ž': 'z',
+        'Ä': 'a', 'Ĺ': 'l', 'Ľ': 'l', 'Ŕ': 'r', 'Ö': 'o', 'Ü': 'u',
+        'Æ': 'ae', 'Ø': 'o', 'Å': 'a', 'Ç': 'c', 'Ñ': 'n', 'Ã': 'a', 'Õ': 'o',
+        'Ê': 'e', 'Ë': 'e', 'Â': 'a', 'Ô': 'o',
+    }
+    return ''.join(mapping.get(c, c) for c in text)
 
 def print_divisor_descriptions(divisors):
     """
@@ -407,22 +427,25 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         # Join all arguments as input text
         user_input = ' '.join(sys.argv[1:])
-        
+
         # Remove numbers
         user_input = remove_numbers(user_input)
-        
+
+        # Normalize special/accented letters
+        user_input = normalize_special_letters(user_input)
+
         # Normalize whitespace
         normalized_input = normalize_whitespace(user_input)
-        
+
         # Create shared cache for this translation
         cache = {}
-        
+
         # Unicode runes (with interactive prompts)
         runes = latin_to_elder_futhark(normalized_input, interactive=True, word_context=normalized_input, substitution_cache=cache)
-        
+
         # Get substituted text
         substituted = get_substituted_text(normalized_input, cache)
-        
+
         # Display all forms
         print("\n" + "="*50)
         print("Original:    ", user_input)
@@ -431,10 +454,10 @@ if __name__ == "__main__":
         print("Substituted: ", substituted)
         print("Elder Futhark:", runes)
         print("="*50)
-        
+
         # Numeric scheme (reuses cached choices) - now returns structured data
         aett_pos_data = to_aett_pos(normalized_input, interactive=True, word_context=normalized_input, substitution_cache=cache)
-        
+
         # Convert to string for display with word separators
         parts = []
         for item in aett_pos_data:
@@ -446,7 +469,7 @@ if __name__ == "__main__":
         aett_pos_str = ' '.join(parts)
         print("\nNumeric ætt:position scheme:")
         print(aett_pos_str)
-        
+
         # ASCII branch art (if aett_pos_data exists)
         if aett_pos_data:
             ascii_art = generate_branch_ascii(aett_pos_data)
@@ -471,22 +494,25 @@ if __name__ == "__main__":
         if user_input.lower() in ['konec', 'exit', 'q']:
             print("Goodbye!")
             break
-        
+
         # Remove numbers
         user_input = remove_numbers(user_input)
-        
+
+        # Normalize special/accented letters
+        user_input = normalize_special_letters(user_input)
+
         # Normalize whitespace
         normalized_input = normalize_whitespace(user_input)
-        
+
         # Create shared cache for this translation
         cache = {}
-        
+
         # Unicode runes (with interactive prompts)
         runes = latin_to_elder_futhark(normalized_input, interactive=True, word_context=normalized_input, substitution_cache=cache)
-        
+
         # Get substituted text
         substituted = get_substituted_text(normalized_input, cache)
-        
+
         # Display all forms
         print("\n" + "="*50)
         print("Original:    ", user_input)
@@ -495,10 +521,10 @@ if __name__ == "__main__":
         print("Substituted: ", substituted)
         print("Elder Futhark:", runes)
         print("="*50)
-        
+
         # Numeric scheme (reuses cached choices) - now returns structured data
         aett_pos_data = to_aett_pos(normalized_input, interactive=True, word_context=normalized_input, substitution_cache=cache)
-        
+
         # Convert to string for display with word separators
         parts = []
         for item in aett_pos_data:
@@ -510,7 +536,7 @@ if __name__ == "__main__":
         aett_pos_str = ' '.join(parts)
         print("\nNumeric ætt:position scheme:")
         print(aett_pos_str)
-        
+
         # ASCII branch art (if aett_pos_data exists)
         if aett_pos_data:
             ascii_art = generate_branch_ascii(aett_pos_data)
@@ -523,4 +549,3 @@ if __name__ == "__main__":
         # Show magical divisors of the rune sum
         divisors = decompose_rune_sum(rune_sum)
         print_divisor_descriptions(divisors)
-        
